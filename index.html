@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>홍보대사 콘텐츠 소재 설문</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1F3864; --accent:#2E74B5; --accent-light:#EAF1FB;
+    --bg:#FAFAF8; --card:#FFFFFF; --text:#1B2430;
+    --text-secondary:#6B7280; --text-muted:#9CA3AF; --border:#E5E7EB; --danger:#D64545;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:'Pretendard',-apple-system,BlinkMacSystemFont,sans-serif; background:var(--bg); color:var(--text); display:flex; justify-content:center; min-height:100vh;}
+  .app{width:100%; max-width:420px; min-height:100vh; background:var(--card); display:flex; flex-direction:column; padding:24px 20px 28px;}
+  .topbar{display:flex; align-items:center; gap:12px; margin-bottom:26px;}
+  .back-btn{background:none; border:none; padding:4px; cursor:pointer; color:var(--text-secondary); font-size:20px; line-height:1; visibility:hidden;}
+  .back-btn.show{visibility:visible;}
+  .progress-track{flex:1; height:4px; background:#EFEFEC; border-radius:4px; overflow:hidden;}
+  .progress-fill{height:100%; width:0%; background:var(--accent); border-radius:4px; transition:width .25s ease;}
+  .progress-count{font-size:12px; color:var(--text-muted); min-width:40px; text-align:right;}
+  .stage{flex:1; display:flex; flex-direction:column; justify-content:center;}
+  .eyebrow{font-size:13px; font-weight:600; color:var(--accent); margin:0 0 10px;}
+  .question{font-size:20px; font-weight:600; line-height:1.42; margin:0 0 22px; color:var(--text);}
+  .hint{font-size:13px; color:var(--text-muted); margin:-14px 0 18px;}
+  textarea, input[type="text"]{width:100%; font-family:inherit; font-size:16px; padding:14px; border:1.5px solid var(--border); border-radius:12px; background:var(--bg); color:var(--text); resize:none;}
+  textarea:focus, input[type="text"]:focus{outline:none; border-color:var(--accent);}
+  .error-msg{display:none; font-size:13px; color:var(--danger); margin-top:8px;}
+  .error-msg.show{display:block;}
+  .scale-row{display:flex; gap:5px;}
+  .scale-btn{flex:1; height:42px; border-radius:10px; border:1.5px solid var(--border); background:var(--card); font-size:13px; font-weight:500; color:var(--text); cursor:pointer;}
+  .scale-btn.selected{background:var(--accent-light); border-color:var(--accent); color:var(--navy);}
+  .scale-caption{display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); margin-top:8px;}
+  .choice-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .choice-grid.single-col{grid-template-columns:1fr;}
+  .choice-btn{padding:14px 12px; border-radius:12px; border:1.5px solid var(--border); background:var(--card); font-size:14px; font-weight:500; color:var(--text); cursor:pointer; text-align:left; line-height:1.35;}
+  .choice-btn.selected{background:var(--accent-light); border-color:var(--accent); color:var(--navy);}
+  .next-btn{margin-top:22px; width:100%; height:52px; border-radius:12px; border:none; background:var(--navy); color:#fff; font-size:16px; font-weight:600; cursor:pointer;}
+  .next-btn:disabled{background:#D8DCE3; cursor:default;}
+  .done-wrap{text-align:center; padding:20px 0;}
+  .done-icon{width:56px; height:56px; border-radius:50%; background:var(--accent-light); color:var(--navy); display:flex; align-items:center; justify-content:center; font-size:28px; margin:0 auto 20px;}
+  .done-title{font-size:20px; font-weight:600; margin:0 0 8px;}
+  .done-body{font-size:14px; color:var(--text-secondary); line-height:1.6; margin:0;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <button class="back-btn" id="backBtn" aria-label="이전">‹</button>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <span class="progress-count" id="progressCount">1/30</span>
+  </div>
+  <div class="stage" id="stage"></div>
+  <button class="next-btn" id="nextBtn">다음</button>
+</div>
+
+<script>
+/* Apps Script 웹앱 URL을 배포 후 여기에 붙여넣으세요 */
+const ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbycG2kHN6Qcy37vDCkd77M_5YNo2bEYSb6aiAJC6Wn52OLuv1GHXw0seZ8ECGuCj4Y6VA/exec";
+
+function scaleStep(key, eyebrow, q, hint){
+  return { key, eyebrow, q, hint, type:"scale" };
+}
+
+const steps = [
+  { key:"name", eyebrow:"시작하기", q:"이름을 알려주세요", type:"text", placeholder:"이름 입력" },
+
+  { key:"cit", eyebrow:"결정적 배경", q:"전주대를 선택하게 된 결정적 배경이나 계기가 있다면, 그때 상황을 편하게 얘기해주세요", hint:"언제, 어떤 상황이었는지 자유롭게", type:"textarea", placeholder:"예: 고3 여름, 유튜브에서 우연히..." },
+  { key:"citFeeling", eyebrow:"결정적 배경", q:"그때 어떤 기분이었어요?", type:"text", placeholder:"한 문장으로 적어주세요" },
+  { key:"triggerType", eyebrow:"결정적 배경", q:"그 계기는 어떤 종류에 가까웠나요?", type:"choice", singleCol:true, options:[
+      { label:"SNS·유튜브 알고리즘으로 우연히 발견", value:"SNS·유튜브 알고리즘" },
+      { label:"지인(친구·선배·가족) 추천", value:"지인추천" },
+      { label:"입시설명회·오픈캠퍼스 방문", value:"설명회·오픈캠퍼스" },
+      { label:"직접 검색해서 찾음", value:"직접검색" },
+  ]},
+
+  { key:"ladderAttr", eyebrow:"래더링", q:"전주대 SNS·설명회·캠퍼스 중 가장 끌렸던 요소 하나는?", type:"text", placeholder:"예: 영상 편집 스타일" },
+  { key:"ladderConseq", eyebrow:"래더링", q:"그 요소가 나에게 구체적으로 어떤 도움이나 변화를 줬나요?", type:"textarea", placeholder:"자유롭게 적어주세요" },
+  { key:"ladderValue", eyebrow:"래더링", q:"그 변화가 나에게 왜 중요한가요?", hint:"평소 중요하게 여기는 것과 연결지어 봐도 좋아요", type:"textarea", placeholder:"자유롭게 적어주세요" },
+
+  scaleStep("selfActive","자기 인식 (나 자신)","나는 \"차분한\" 편보다 \"활동적인\" 편에 가깝다"),
+  scaleStep("selfUnique","자기 인식 (나 자신)","나는 \"평범한\" 편보다 \"개성있는\" 편에 가깝다"),
+  scaleStep("selfChallenge","자기 인식 (나 자신)","나는 \"안정적인\" 편보다 \"도전적인\" 편에 가깝다"),
+  scaleStep("selfSocial","자기 인식 (나 자신)","나는 \"내향적인\" 편보다 \"사교적인\" 편에 가깝다"),
+  scaleStep("imgActive","자기 인식 (전주대생 이미지)","일반적인 전주대생은 \"차분한\" 편보다 \"활동적인\" 편에 가깝다"),
+  scaleStep("imgUnique","자기 인식 (전주대생 이미지)","일반적인 전주대생은 \"평범한\" 편보다 \"개성있는\" 편에 가깝다"),
+  scaleStep("imgChallenge","자기 인식 (전주대생 이미지)","일반적인 전주대생은 \"안정적인\" 편보다 \"도전적인\" 편에 가깝다"),
+  scaleStep("imgSocial","자기 인식 (전주대생 이미지)","일반적인 전주대생은 \"내향적인\" 편보다 \"사교적인\" 편에 가깝다"),
+
+  scaleStep("tcvFunc1","선택 이유","전주대는 진로·취업에 실질적으로 도움이 될 거라 생각했다"),
+  scaleStep("tcvFunc2","선택 이유","전주대의 시설·프로그램이 실용적으로 유용해 보였다"),
+  scaleStep("tcvSoc1","선택 이유","전주대를 선택하면 주변에서 좋게 봐줄 것 같았다"),
+  scaleStep("tcvSoc2","선택 이유","전주대의 소속감·분위기가 매력적으로 느껴졌다"),
+  scaleStep("tcvEmo1","선택 이유","전주대를 떠올리면 기분이 좋아진다"),
+  scaleStep("tcvEmo2","선택 이유","전주대 관련 콘텐츠를 볼 때 설렜다"),
+  scaleStep("tcvEpi1","선택 이유","전주대가 새롭고 흥미로운 경험을 줄 것 같았다"),
+  scaleStep("tcvEpi2","선택 이유","전주대에 대해 더 알아보고 싶은 호기심이 컸다"),
+  scaleStep("tcvSit1","선택 이유","그 시기 나의 상황에 현실적으로 맞는 선택이었다"),
+  scaleStep("tcvSit2","선택 이유","특정 시기·상황 때문에 전주대를 선택하게 됐다"),
+
+  { key:"diff", eyebrow:"비교·차별화", q:"다른 학교와 비교했을 때, 전주대만 줄 수 있었던 것은?", type:"textarea", placeholder:"자유롭게 적어주세요" },
+  { key:"interestFree", eyebrow:"평소 관심사", q:"평소 SNS에서 가장 많이 올리거나 찾아보는 주제는?", type:"text", placeholder:"예: 헬스, 맛집, 여행 등" },
+
+  { key:"tone", eyebrow:"콘텐츠 스타일", q:"내가 편하게 느끼는 콘텐츠 스타일은?", type:"choice", options:[
+      { label:"감성", value:"감성" }, { label:"유머", value:"유머" },
+      { label:"정보전달", value:"정보전달" }, { label:"솔직토크", value:"솔직토크" },
+  ]},
+  { key:"source", eyebrow:"가장 생생한 답변", q:"지금까지 답변 중 가장 생생하게 기억나는 건?", type:"choice", singleCol:true, options:[
+      { label:"결정적 배경 장면", value:"결정적 배경 장면" },
+      { label:"전주대 SNS를 보고 끌렸던 순간", value:"전주대 SNS를 보고 끌렸던 순간" },
+      { label:"다른 학교와 비교했던 순간", value:"다른 학교와 비교했던 순간" },
+      { label:"고등학생 때 느꼈던 이미지·감정", value:"고등학생 때 느꼈던 이미지·감정" },
+  ]},
+  { key:"interestCat", eyebrow:"관심사 카테고리", q:"내 관심사에 가장 가까운 카테고리는?", type:"choice", options:[
+      { label:"운동/피트니스", value:"운동/피트니스" }, { label:"맛집/카페", value:"맛집/카페" },
+      { label:"패션/뷰티", value:"패션/뷰티" }, { label:"음악/공연", value:"음악/공연" },
+      { label:"여행", value:"여행" }, { label:"게임/오락", value:"게임/오락" },
+      { label:"스터디/자기계발", value:"스터디/자기계발" }, { label:"반려동물/일상", value:"반려동물/일상" },
+      { label:"기타", value:"기타" },
+  ]},
+];
+
+let current = 0;
+const answers = {};
+const stage = document.getElementById('stage');
+const nextBtn = document.getElementById('nextBtn');
+const backBtn = document.getElementById('backBtn');
+const progressFill = document.getElementById('progressFill');
+const progressCount = document.getElementById('progressCount');
+
+function render(){
+  const s = steps[current];
+  progressFill.style.width = Math.round(((current+1)/steps.length)*100) + '%';
+  progressCount.textContent = (current+1) + '/' + steps.length;
+  backBtn.classList.toggle('show', current > 0);
+  nextBtn.disabled = false;
+  nextBtn.textContent = (current === steps.length - 1) ? '제출하기' : '다음';
+
+  let bodyHtml = '';
+  if(s.type === 'text'){
+    bodyHtml = `<input type="text" id="input" placeholder="${s.placeholder}" value="${answers[s.key] || ''}"/>`;
+  } else if(s.type === 'textarea'){
+    bodyHtml = `<textarea id="input" rows="5" placeholder="${s.placeholder}">${answers[s.key] || ''}</textarea>`;
+  } else if(s.type === 'scale'){
+    let btns = '';
+    for(let i=1;i<=7;i++){
+      const sel = answers[s.key] === i ? 'selected' : '';
+      btns += `<button type="button" class="scale-btn ${sel}" data-value="${i}">${i}</button>`;
+    }
+    bodyHtml = `<div class="scale-row" id="input" data-type="scale">${btns}</div>
+      <div class="scale-caption"><span>전혀 아니다</span><span>매우 그렇다</span></div>`;
+  } else if(s.type === 'choice'){
+    let btns = '';
+    s.options.forEach(opt => {
+      const sel = answers[s.key] === opt.value ? 'selected' : '';
+      btns += `<button type="button" class="choice-btn ${sel}" data-value="${opt.value}">${opt.label}</button>`;
+    });
+    bodyHtml = `<div class="choice-grid ${s.singleCol ? 'single-col' : ''}" id="input" data-type="choice">${btns}</div>`;
+  }
+
+  const hintHtml = s.hint ? `<p class="hint">${s.hint}</p>` : '';
+  stage.innerHTML = `
+    <p class="eyebrow">${s.eyebrow}</p>
+    <p class="question">${s.q}</p>
+    ${hintHtml}
+    ${bodyHtml}
+    <p class="error-msg" id="errorMsg">답변을 선택하거나 입력해주세요</p>
+  `;
+  attachHandlers(s);
+}
+
+function attachHandlers(s){
+  const errorMsg = document.getElementById('errorMsg');
+  if(s.type === 'scale' || s.type === 'choice'){
+    const container = document.getElementById('input');
+    container.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        container.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        const val = btn.getAttribute('data-value');
+        answers[s.key] = (s.type === 'scale') ? Number(val) : val;
+        errorMsg.classList.remove('show');
+      });
+    });
+  } else {
+    document.getElementById('input').addEventListener('input', () => errorMsg.classList.remove('show'));
+  }
+}
+
+function validate(s){
+  if(s.type === 'text' || s.type === 'textarea'){
+    const val = document.getElementById('input').value.trim();
+    if(!val) return false;
+    answers[s.key] = val;
+    return true;
+  }
+  return answers[s.key] !== undefined && answers[s.key] !== null && answers[s.key] !== '';
+}
+
+nextBtn.addEventListener('click', () => {
+  const s = steps[current];
+  if(!validate(s)){ document.getElementById('errorMsg').classList.add('show'); return; }
+  if(current < steps.length - 1){ current++; render(); } else { submit(); }
+});
+backBtn.addEventListener('click', () => { if(current > 0){ current--; render(); } });
+
+function submit(){
+  nextBtn.disabled = true;
+  nextBtn.textContent = '저장 중...';
+  fetch(ENDPOINT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(answers),
+  }).then(showDone).catch(showDone);
+}
+
+function showDone(){
+  progressFill.style.width = '100%';
+  progressCount.textContent = steps.length + '/' + steps.length;
+  backBtn.classList.remove('show');
+  nextBtn.style.display = 'none';
+  stage.innerHTML = `
+    <div class="done-wrap">
+      <div class="done-icon">✓</div>
+      <p class="done-title">응답이 저장됐어요</p>
+      <p class="done-body">소중한 답변 감사해요.</p>
+    </div>`;
+}
+
+render();
+</script>
+</body>
+</html>
