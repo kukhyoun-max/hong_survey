@@ -70,11 +70,12 @@ const steps = [
 
   { key:"cit", eyebrow:"결정적 배경", q:"전주대를 선택하게 된 결정적 배경이나 계기가 있다면, 그때 상황을 편하게 얘기해주세요", hint:"언제, 어떤 상황이었는지 자유롭게", type:"textarea", placeholder:"예: 고3 여름, 유튜브에서 우연히..." },
   { key:"citFeeling", eyebrow:"결정적 배경", q:"그때 어떤 기분이었어요?", type:"text", placeholder:"한 문장으로 적어주세요" },
-  { key:"triggerType", eyebrow:"결정적 배경", q:"그 계기는 어떤 종류에 가까웠나요?", type:"choice", singleCol:true, options:[
+  { key:"triggerType", eyebrow:"결정적 배경", q:"그 계기는 어떤 종류에 가까웠나요?", type:"choice", singleCol:true, allowOther:true, options:[
       { label:"SNS·유튜브 알고리즘으로 우연히 발견", value:"SNS·유튜브 알고리즘" },
       { label:"지인(친구·선배·가족) 추천", value:"지인추천" },
       { label:"입시설명회·오픈캠퍼스 방문", value:"설명회·오픈캠퍼스" },
       { label:"직접 검색해서 찾음", value:"직접검색" },
+      { label:"기타 (직접 입력)", value:"기타" },
   ]},
 
   { key:"ladderAttr", eyebrow:"래더링", q:"전주대 SNS·설명회·캠퍼스 중 가장 끌렸던 요소 하나는?", type:"text", placeholder:"예: 영상 편집 스타일" },
@@ -159,6 +160,12 @@ function render(){
       btns += `<button type="button" class="choice-btn ${sel}" data-value="${opt.value}">${opt.label}</button>`;
     });
     bodyHtml = `<div class="choice-grid ${s.singleCol ? 'single-col' : ''}" id="input" data-type="choice">${btns}</div>`;
+    if(s.allowOther){
+      const otherVal = answers[s.key + 'OtherText'] || '';
+      const show = answers[s.key] === '기타';
+      bodyHtml += `<input type="text" id="otherInput" placeholder="직접 입력해주세요" value="${otherVal}"
+        style="margin-top:10px; display:${show ? 'block' : 'none'};"/>`;
+    }
   }
 
   const hintHtml = s.hint ? `<p class="hint">${s.hint}</p>` : '';
@@ -183,8 +190,24 @@ function attachHandlers(s){
         const val = btn.getAttribute('data-value');
         answers[s.key] = (s.type === 'scale') ? Number(val) : val;
         errorMsg.classList.remove('show');
+        if(s.allowOther){
+          const otherInput = document.getElementById('otherInput');
+          if(otherInput){
+            otherInput.style.display = (val === '기타') ? 'block' : 'none';
+            if(val === '기타'){ otherInput.focus(); }
+          }
+        }
       });
     });
+    if(s.allowOther){
+      const otherInput = document.getElementById('otherInput');
+      if(otherInput){
+        otherInput.addEventListener('input', () => {
+          answers[s.key + 'OtherText'] = otherInput.value;
+          errorMsg.classList.remove('show');
+        });
+      }
+    }
   } else {
     document.getElementById('input').addEventListener('input', () => errorMsg.classList.remove('show'));
   }
@@ -196,6 +219,10 @@ function validate(s){
     if(!val) return false;
     answers[s.key] = val;
     return true;
+  }
+  if(s.allowOther && answers[s.key] === '기타'){
+    const otherVal = (answers[s.key + 'OtherText'] || '').trim();
+    if(!otherVal) return false;
   }
   return answers[s.key] !== undefined && answers[s.key] !== null && answers[s.key] !== '';
 }
@@ -210,6 +237,16 @@ backBtn.addEventListener('click', () => { if(current > 0){ current--; render(); 
 function submit(){
   nextBtn.disabled = true;
   nextBtn.textContent = '저장 중...';
+
+  // '기타' 선택 항목은 실제 입력한 텍스트로 치환해서 전송
+  steps.forEach(s => {
+    if(s.allowOther && answers[s.key] === '기타'){
+      const otherVal = answers[s.key + 'OtherText'];
+      if(otherVal){ answers[s.key] = `기타: ${otherVal}`; }
+    }
+    delete answers[s.key + 'OtherText'];
+  });
+
   fetch(ENDPOINT_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
