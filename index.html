@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
 <title>홍보대사 콘텐츠 소재 설문</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,9 +26,10 @@
   .stage{flex:1; display:flex; flex-direction:column; justify-content:center;}
   .eyebrow{font-size:13px; font-weight:600; color:var(--accent); margin:0 0 10px;}
   .question{font-size:20px; font-weight:600; line-height:1.42; margin:0 0 22px; color:var(--text);}
-  .hint{font-size:13px; color:var(--text-muted); margin:-14px 0 18px;}
-  textarea, input[type="text"]{width:100%; font-family:inherit; font-size:16px; padding:14px; border:1.5px solid var(--border); border-radius:12px; background:var(--bg); color:var(--text); resize:none;}
-  textarea:focus, input[type="text"]:focus{outline:none; border-color:var(--accent);}
+  .hint{font-size:13px; color:var(--text-muted); margin:-14px 0 18px; line-height:1.5;}
+  textarea, input[type="text"], select{width:100%; font-family:inherit; font-size:16px; padding:14px; border:1.5px solid var(--border); border-radius:12px; background:var(--bg); color:var(--text); resize:none;}
+  select{appearance:none; -webkit-appearance:none; background-image:linear-gradient(45deg,transparent 50%,var(--text-muted) 50%),linear-gradient(135deg,var(--text-muted) 50%,transparent 50%); background-position:calc(100% - 20px) 50%,calc(100% - 15px) 50%; background-size:5px 5px; background-repeat:no-repeat;}
+  textarea:focus, input[type="text"]:focus, select:focus{outline:none; border-color:var(--accent);}
   .error-msg{display:none; font-size:13px; color:var(--danger); margin-top:8px;}
   .error-msg.show{display:block;}
   .scale-row{display:flex; gap:5px;}
@@ -36,10 +38,16 @@
   .scale-caption{display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); margin-top:8px;}
   .choice-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
   .choice-grid.single-col{grid-template-columns:1fr;}
-  .choice-btn{padding:14px 12px; border-radius:12px; border:1.5px solid var(--border); background:var(--card); font-size:14px; font-weight:500; color:var(--text); cursor:pointer; text-align:left; line-height:1.35;}
+  .choice-btn{padding:14px 12px; border-radius:12px; border:1.5px solid var(--border); background:var(--card); font-size:14px; font-weight:500; color:var(--text); cursor:pointer; text-align:left; line-height:1.45; white-space:pre-line;}
   .choice-btn.selected{background:var(--accent-light); border-color:var(--accent); color:var(--navy);}
   .next-btn{margin-top:22px; width:100%; height:52px; border-radius:12px; border:none; background:var(--navy); color:#fff; font-size:16px; font-weight:600; cursor:pointer;}
   .next-btn:disabled{background:#D8DCE3; cursor:default;}
+  .consent-box{border:1.5px solid var(--border); border-radius:12px; background:var(--bg); padding:16px; font-size:13.5px; line-height:1.65; color:var(--text); margin-bottom:16px; max-height:46vh; overflow-y:auto;}
+  .consent-box dl{margin:0;}
+  .consent-box dt{font-weight:600; color:var(--navy); margin-top:10px;}
+  .consent-box dt:first-child{margin-top:0;}
+  .consent-box dd{margin:2px 0 0;}
+  .consent-note{font-size:13px; color:var(--text-secondary); line-height:1.6; margin:0 0 16px; padding:12px 14px; border-radius:10px; background:var(--accent-light);}
   .done-wrap{text-align:center; padding:20px 0;}
   .done-icon{width:56px; height:56px; border-radius:50%; background:var(--accent-light); color:var(--navy); display:flex; align-items:center; justify-content:center; font-size:28px; margin:0 auto 20px;}
   .done-title{font-size:20px; font-weight:600; margin:0 0 8px;}
@@ -51,23 +59,25 @@
   <div class="topbar">
     <button class="back-btn" id="backBtn" aria-label="이전">‹</button>
     <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
-    <span class="progress-count" id="progressCount">1/30</span>
+    <span class="progress-count" id="progressCount"></span>
   </div>
   <div class="stage" id="stage"></div>
   <button class="next-btn" id="nextBtn">다음</button>
 </div>
 
 <script>
-/* Apps Script 웹앱 URL을 배포 후 여기에 붙여넣으세요 */
+/* Apps Script 웹앱 URL (배포 관리 → 기존 배포 수정 → 새 버전으로 올리면 URL은 그대로 유지돼요) */
 const ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbycG2kHN6Qcy37vDCkd77M_5YNo2bEYSb6aiAJC6Wn52OLuv1GHXw0seZ8ECGuCj4Y6VA/exec";
+
+/* 홍보대사 명단 (가나다순) */
+const ROSTER = ["강다솔","김세영","김지훈","김현아","김현우","백가민","변수현","오화종","이다희","이서연","이예은","이은채","이지민","임은지","장서영","최승훈","한가온"];
 
 function scaleStep(key, eyebrow, q, hint){
   return { key, eyebrow, q, hint, type:"scale" };
 }
 
-const steps = [
-  { key:"name", eyebrow:"시작하기", q:"이름을 알려주세요", type:"text", placeholder:"이름 입력" },
-
+/* ── Part 1~6 (기존 문항) ── */
+const coreSteps = [
   { key:"cit", eyebrow:"결정적 배경", q:"전주대를 선택하게 된 결정적 배경이나 계기가 있다면, 그때 상황을 편하게 얘기해주세요", hint:"언제, 어떤 상황이었는지 자유롭게", type:"textarea", placeholder:"예: 고3 여름, 유튜브에서 우연히..." },
   { key:"citFeeling", eyebrow:"결정적 배경", q:"그때 어떤 기분이었어요?", type:"text", placeholder:"한 문장으로 적어주세요" },
   { key:"triggerType", eyebrow:"결정적 배경", q:"그 계기는 어떤 종류에 가까웠나요?", type:"choice", singleCol:true, allowOther:true, options:[
@@ -124,7 +134,44 @@ const steps = [
   ]},
 ];
 
+/* ── Part 7. 우리 팀의 일하는 방식 (핵심가치) ── */
+const valueSteps = [
+  { key:"v1Trend", eyebrow:"일하는 방식 · 전주대 렌즈", q:"요즘 따라 해보고 싶은 트렌드나 밈 하나를 적고, 그걸 전주대 버전으로 바꾼다면 무엇을 바꿀지 적어주세요",
+    hint:"정답은 없어요. 떠오르는 대로 편하게", type:"textarea", placeholder:"예: '○○에 드래곤 지나감' 밈 → 드래곤 대신 JJ가 시계탑 위로 지나가게" },
+  { key:"v2Own", eyebrow:"일하는 방식 · 끝까지 책임", q:"팀 활동에서 아무도 맡지 않은 일을 내가 끝까지 마무리한 경험이 있다면 적어주세요",
+    hint:"학교·알바·동아리 어디든 괜찮아요. 없으면 \"없음\"도 괜찮아요", type:"textarea", placeholder:"어떤 상황이었고, 내가 무엇을 했는지" },
+  { key:"v3Absence", eyebrow:"일하는 방식 · 끝까지 책임", q:"촬영 전날, 팀원 한 명이 갑자기 못 온다고 해요. 가장 먼저 할 행동은?", type:"choice", singleCol:true, options:[
+      { label:"팀장에게 알리고 결정을 기다린다", value:"팀장에게 알리고 대기" },
+      { label:"빠진 역할을 내가 대신 맡겠다고 제안한다", value:"빠진 역할 대신 맡기" },
+      { label:"남은 인원으로 할 수 있게 기획을 줄여서 공유한다", value:"기획 축소해 공유" },
+      { label:"촬영 일정을 미루자고 제안한다", value:"일정 연기 제안" },
+  ]},
+  { key:"v4Shared", eyebrow:"일하는 방식 · 반응으로 증명", q:"최근 내가 저장하거나 친구에게 공유한 콘텐츠 하나와, 공유한 이유를 적어주세요",
+    type:"textarea", placeholder:"예: ○○ 계정 카페 릴스, 친구랑 가보려고 저장" },
+  { key:"v5Metric", eyebrow:"일하는 방식 · 반응으로 증명", q:"둘 중 더 잘 만든 콘텐츠는 어느 쪽이라고 생각하나요?", hint:"고른 이유도 한 줄 적어주세요", type:"choice", singleCol:true, reason:true, options:[
+      { label:"A\n조회수 5만, 댓글은 대부분 \"ㅋㅋㅋ\"", value:"A(조회수)" },
+      { label:"B\n조회수 5천, \"여기 가보고 싶다\" 댓글 여러 개", value:"B(반응)" },
+  ]},
+  { key:"v6Voice", eyebrow:"일하는 방식 · 앞에서 말하기", q:"회의에서 정해진 기획이 별로라고 느껴질 때, 나는 보통?", type:"choice", singleCol:true, options:[
+      { label:"회의 중에 바로 의견을 말한다", value:"회의 중 바로" },
+      { label:"회의 끝나고 팀장에게 따로 말한다", value:"팀장에게 따로" },
+      { label:"친한 팀원에게 먼저 이야기해본다", value:"친한 팀원에게 먼저" },
+      { label:"일단 정해진 대로 따른다", value:"정해진 대로 따름" },
+  ]},
+];
+
+/* ── 시작 단계 ── */
+const nameStep = { key:"name", eyebrow:"시작하기", q:"이름을 선택해주세요", hint:"명단에 이름이 없으면 담당자에게 알려주세요", type:"select" };
+const pathStep = { key:"pathAsk", eyebrow:"시작하기", q:"이전에 이 설문을 작성한 적 있나요?", type:"choice", singleCol:true, options:[
+    { label:"네, 작성한 적 있어요", value:"part7" },
+    { label:"아니요, 처음이에요", value:"full" },
+]};
+const consentStep = { key:"consent", eyebrow:"개인정보 수집·이용 동의", q:"설문 응답을 아래 목적으로 수집·이용하는 데 동의하시나요?", type:"consent" };
+
+let steps = [nameStep];
 let current = 0;
+let mode = null;            // 'full' | 'part7'
+let statusChecked = false;  // 서버에서 기존 응답 여부를 확인했는지
 const answers = {};
 const stage = document.getElementById('stage');
 const nextBtn = document.getElementById('nextBtn');
@@ -132,19 +179,45 @@ const backBtn = document.getElementById('backBtn');
 const progressFill = document.getElementById('progressFill');
 const progressCount = document.getElementById('progressCount');
 
+function esc(v){ return String(v ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function buildSteps(){
+  const head = statusChecked ? [nameStep, consentStep] : [nameStep, pathStep, consentStep];
+  if(answers.consent === '미동의'){ steps = head; return; }
+  const body = (mode === 'part7') ? valueSteps : [...coreSteps, ...valueSteps];
+  steps = mode ? [...head, ...body] : head;
+}
+
 function render(){
   const s = steps[current];
-  progressFill.style.width = Math.round(((current+1)/steps.length)*100) + '%';
-  progressCount.textContent = (current+1) + '/' + steps.length;
+  progressFill.style.width = mode ? Math.round(((current+1)/steps.length)*100) + '%' : '4%';
+  progressCount.textContent = mode ? (current+1) + '/' + steps.length : '';
   backBtn.classList.toggle('show', current > 0);
   nextBtn.disabled = false;
-  nextBtn.textContent = (current === steps.length - 1) ? '제출하기' : '다음';
+  const isLast = (current === steps.length - 1) && (mode || answers.consent === '미동의');
+  nextBtn.textContent = isLast ? '제출하기' : '다음';
 
   let bodyHtml = '';
-  if(s.type === 'text'){
-    bodyHtml = `<input type="text" id="input" placeholder="${s.placeholder}" value="${answers[s.key] || ''}"/>`;
+  if(s.type === 'select'){
+    const opts = ROSTER.map(n => `<option value="${n}" ${answers.name===n?'selected':''}>${n}</option>`).join('');
+    bodyHtml = `<select id="input"><option value="">이름 선택</option>${opts}</select>`;
+  } else if(s.type === 'consent'){
+    bodyHtml = `
+      <div class="consent-box"><dl>
+        <dt>수집·이용 목적</dt><dd>홍보대사 콘텐츠 소재 발굴, 팀 구성 및 역할 배치 참고</dd>
+        <dt>수집 항목</dt><dd>이름, 전주대 선택 계기·동기, 성향 관련 응답, 관심사, 활동 경험에 대한 응답</dd>
+        <dt>보유·이용 기간</dt><dd>2027년 2월 28일까지 (기간 종료 후 지체 없이 파기)</dd>
+        <dt>이용 범위</dt><dd>대외협력홍보실 담당자만 열람하며, 응답 내용은 다른 홍보대사에게 공개하지 않습니다.</dd>
+      </dl></div>
+      <p class="consent-note">동의하지 않으셔도 됩니다. 동의하지 않아도 홍보대사 활동, 평가, 상벌점에 어떠한 불이익도 없습니다.${mode==='part7' ? '<br>동의하지 않으면 이전에 작성한 응답은 삭제됩니다.' : ''}</p>
+      <div class="choice-grid single-col" id="input" data-type="choice">
+        <button type="button" class="choice-btn ${answers.consent==='동의'?'selected':''}" data-value="동의">동의합니다</button>
+        <button type="button" class="choice-btn ${answers.consent==='미동의'?'selected':''}" data-value="미동의">동의하지 않습니다</button>
+      </div>`;
+  } else if(s.type === 'text'){
+    bodyHtml = `<input type="text" id="input" placeholder="${esc(s.placeholder)}" value="${esc(answers[s.key])}"/>`;
   } else if(s.type === 'textarea'){
-    bodyHtml = `<textarea id="input" rows="5" placeholder="${s.placeholder}">${answers[s.key] || ''}</textarea>`;
+    bodyHtml = `<textarea id="input" rows="5" placeholder="${esc(s.placeholder)}">${esc(answers[s.key])}</textarea>`;
   } else if(s.type === 'scale'){
     let btns = '';
     for(let i=1;i<=7;i++){
@@ -157,14 +230,16 @@ function render(){
     let btns = '';
     s.options.forEach(opt => {
       const sel = answers[s.key] === opt.value ? 'selected' : '';
-      btns += `<button type="button" class="choice-btn ${sel}" data-value="${opt.value}">${opt.label}</button>`;
+      btns += `<button type="button" class="choice-btn ${sel}" data-value="${esc(opt.value)}">${esc(opt.label)}</button>`;
     });
     bodyHtml = `<div class="choice-grid ${s.singleCol ? 'single-col' : ''}" id="input" data-type="choice">${btns}</div>`;
     if(s.allowOther){
-      const otherVal = answers[s.key + 'OtherText'] || '';
       const show = answers[s.key] === '기타';
-      bodyHtml += `<input type="text" id="otherInput" placeholder="직접 입력해주세요" value="${otherVal}"
+      bodyHtml += `<input type="text" id="otherInput" placeholder="직접 입력해주세요" value="${esc(answers[s.key + 'OtherText'])}"
         style="margin-top:10px; display:${show ? 'block' : 'none'};"/>`;
+    }
+    if(s.reason){
+      bodyHtml += `<input type="text" id="reasonInput" placeholder="이유 한 줄" value="${esc(answers[s.key + 'Reason'])}" style="margin-top:10px;"/>`;
     }
   }
 
@@ -181,7 +256,7 @@ function render(){
 
 function attachHandlers(s){
   const errorMsg = document.getElementById('errorMsg');
-  if(s.type === 'scale' || s.type === 'choice'){
+  if(s.type === 'scale' || s.type === 'choice' || s.type === 'consent'){
     const container = document.getElementById('input');
     container.querySelectorAll('button').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -197,74 +272,128 @@ function attachHandlers(s){
             if(val === '기타'){ otherInput.focus(); }
           }
         }
+        if(s.type === 'consent'){
+          buildSteps();
+          nextBtn.textContent = (current === steps.length - 1) ? '제출하기' : '다음';
+        }
       });
     });
-    if(s.allowOther){
-      const otherInput = document.getElementById('otherInput');
-      if(otherInput){
-        otherInput.addEventListener('input', () => {
-          answers[s.key + 'OtherText'] = otherInput.value;
+    ['otherInput','reasonInput'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el){
+        el.addEventListener('input', () => {
+          answers[s.key + (id === 'otherInput' ? 'OtherText' : 'Reason')] = el.value;
           errorMsg.classList.remove('show');
         });
       }
-    }
+    });
   } else {
-    document.getElementById('input').addEventListener('input', () => errorMsg.classList.remove('show'));
+    const el = document.getElementById('input');
+    el.addEventListener('input', () => errorMsg.classList.remove('show'));
+    el.addEventListener('change', () => errorMsg.classList.remove('show'));
   }
 }
 
 function validate(s){
-  if(s.type === 'text' || s.type === 'textarea'){
+  if(s.type === 'text' || s.type === 'textarea' || s.type === 'select'){
     const val = document.getElementById('input').value.trim();
     if(!val) return false;
     answers[s.key] = val;
     return true;
   }
   if(s.allowOther && answers[s.key] === '기타'){
-    const otherVal = (answers[s.key + 'OtherText'] || '').trim();
-    if(!otherVal) return false;
+    if(!(answers[s.key + 'OtherText'] || '').trim()) return false;
   }
+  if(s.reason && !(answers[s.key + 'Reason'] || '').trim()) return false;
   return answers[s.key] !== undefined && answers[s.key] !== null && answers[s.key] !== '';
 }
 
-nextBtn.addEventListener('click', () => {
+/* 이름 선택 후: 서버에서 기존 응답 여부 확인 → 자동 분기 */
+function checkStatus(name){
+  nextBtn.disabled = true;
+  nextBtn.textContent = '확인 중...';
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  return fetch(ENDPOINT_URL + '?action=status&name=' + encodeURIComponent(name), { signal: ctrl.signal })
+    .then(r => r.json())
+    .then(st => {
+      clearTimeout(timer);
+      if(st.open === false){ showMessage('응답 기간이 끝났어요', '설문 응답이 마감됐어요. 궁금한 점은 담당자에게 문의해주세요.'); return 'stop'; }
+      if(st.part7Done){ showMessage('이미 제출했어요', name + '님의 응답은 이미 저장돼 있어요. 수정이 필요하면 담당자에게 알려주세요.'); return 'stop'; }
+      if(typeof st.existing === 'boolean'){
+        statusChecked = true;
+        mode = st.existing ? 'part7' : 'full';
+      }
+      return 'ok';
+    })
+    .catch(() => { clearTimeout(timer); statusChecked = false; return 'ok'; });
+}
+
+nextBtn.addEventListener('click', async () => {
   const s = steps[current];
   if(!validate(s)){ document.getElementById('errorMsg').classList.add('show'); return; }
+
+  if(s.key === 'name'){
+    statusChecked = false; mode = null;
+    const res = await checkStatus(answers.name);
+    if(res === 'stop') return;
+  }
+  if(s.key === 'pathAsk'){ mode = answers.pathAsk; }
+
+  buildSteps();
   if(current < steps.length - 1){ current++; render(); } else { submit(); }
 });
-backBtn.addEventListener('click', () => { if(current > 0){ current--; render(); } });
+backBtn.addEventListener('click', () => {
+  if(current > 0){
+    current--;
+    if(steps[current].key === 'name'){ mode = null; statusChecked = false; delete answers.consent; buildSteps(); }
+    render();
+  }
+});
 
 function submit(){
   nextBtn.disabled = true;
   nextBtn.textContent = '저장 중...';
 
-  // '기타' 선택 항목은 실제 입력한 텍스트로 치환해서 전송
-  steps.forEach(s => {
-    if(s.allowOther && answers[s.key] === '기타'){
-      const otherVal = answers[s.key + 'OtherText'];
-      if(otherVal){ answers[s.key] = `기타: ${otherVal}`; }
-    }
-    delete answers[s.key + 'OtherText'];
-  });
+  const payload = { name: answers.name, consent: answers.consent, mode: mode || (answers.pathAsk || 'unknown'),
+                    statusChecked, userAgent: navigator.userAgent };
+
+  if(answers.consent === '동의'){
+    steps.forEach(s => {
+      if(['name','pathAsk','consent'].includes(s.key)) return;
+      let v = answers[s.key];
+      if(s.allowOther && v === '기타' && answers[s.key + 'OtherText']) v = `기타: ${answers[s.key + 'OtherText']}`;
+      payload[s.key] = v;
+      if(s.reason) payload[s.key + 'Reason'] = answers[s.key + 'Reason'];
+    });
+  }
 
   fetch(ENDPOINT_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(answers),
+    body: JSON.stringify(payload),
   }).then(showDone).catch(showDone);
 }
 
-function showDone(){
+function showMessage(title, body, icon){
   progressFill.style.width = '100%';
-  progressCount.textContent = steps.length + '/' + steps.length;
+  progressCount.textContent = '';
   backBtn.classList.remove('show');
   nextBtn.style.display = 'none';
   stage.innerHTML = `
     <div class="done-wrap">
-      <div class="done-icon">✓</div>
-      <p class="done-title">응답이 저장됐어요</p>
-      <p class="done-body">소중한 답변 감사해요.</p>
+      <div class="done-icon">${icon || 'i'}</div>
+      <p class="done-title">${title}</p>
+      <p class="done-body">${body}</p>
     </div>`;
+}
+
+function showDone(){
+  if(answers.consent === '미동의'){
+    showMessage('선택이 저장됐어요', '동의하지 않으셨어요. 활동이나 평가에 불이익은 없어요.<br>마음이 바뀌면 담당자에게 알려주세요.', '✓');
+  } else {
+    showMessage('응답이 저장됐어요', '소중한 답변 감사해요.', '✓');
+  }
 }
 
 render();
