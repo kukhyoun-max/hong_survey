@@ -549,6 +549,14 @@ function showDone(){
   }
 }
 
+/* 개인 링크(…/#c=코드)로 들어오면 코드 칸을 미리 채워요. # 뒤라서 서버 기록에 남지 않고, 주소창에서도 바로 지워요 */
+(() => {
+  const m = location.hash.match(/[#&]c=([A-Za-z0-9]{4,12})/);
+  if(!m) return;
+  answers.code = m[1].toUpperCase();
+  history.replaceState(null, '', location.pathname + location.search);
+})();
+
 render();
 </script>
 </body>
