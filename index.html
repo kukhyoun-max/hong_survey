@@ -453,7 +453,7 @@ function checkCode(code){
       clearTimeout(timer);
       if(st.open === false){ showMessage('응답 기간이 끝났어요', '설문 응답이 마감됐어요. 궁금한 점은 담당자에게 문의해 주세요.'); return 'stop'; }
       if(!st.valid){ return 'invalid'; }
-      if(st.done){ showMessage('이미 제출했어요', '응답이 이미 저장돼 있어요. 수정이나 삭제가 필요하면 담당자에게 알려 주세요.'); return 'stop'; }
+      if(st.done){ showMessage('이미 제출했어요', (st.round ? '이번 ' + st.round + '회차 ' : '') + '응답이 이미 저장돼 있어요. 수정이나 삭제가 필요하면 담당자에게 알려 주세요.'); return 'stop'; }   // 같은 회차만 1회 (서버 SURVEY_ROUND, 2026-10-30)
       respondent = st.name || '';
       return 'ok';
     })
@@ -523,9 +523,11 @@ function submit(){
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(payload),
   }).then(r => r.json()).then(res => {
-    if(res && res.ok === false && res.error === 'done'){ showMessage('이미 제출했어요', '응답이 이미 저장돼 있어요. 수정이나 삭제가 필요하면 담당자에게 알려 주세요.'); return; }
+    if(res && res.ok === false && res.error === 'done'){ showMessage('이미 제출했어요', (res.round ? '이번 ' + res.round + '회차 ' : '') + '응답이 이미 저장돼 있어요. 수정이나 삭제가 필요하면 담당자에게 알려 주세요.'); return; }
+    // 저장 실패가 보이게(2026-10-30): 마감·코드 오류 등은 완료 화면 대신 알림
+    if(res && res.ok === false){ showMessage('저장하지 못했어요', ({ closed:'응답 기간이 끝났어요.', code:'참여 코드를 다시 확인해 주세요.', version:'페이지를 새로고침한 뒤 다시 제출해 주세요.' }[res.error] || '잠시 후 다시 제출해 주세요.') + ' 계속 안 되면 담당자에게 알려 주세요.'); return; }
     showDone();
-  }).catch(showDone);
+  }).catch(() => showMessage('제출을 확인하지 못했어요', '인터넷 연결을 확인하고 다시 제출해 주세요. 이미 저장됐다면 다시 낼 때 「이미 제출했어요」가 떠요.'));
 }
 
 function showMessage(title, body, icon){
